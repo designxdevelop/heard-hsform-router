@@ -1,0 +1,157 @@
+<style>
+  div#lightbox-mountpoint {
+    z-index: 9999;
+  }
+  .swiper-button-disabled {
+    opacity: 0.5;
+  }
+
+  /* Anti-flicker CSS for Homepage Button A/B Test */
+  /* This CSS should be placed in the <head> section before any other scripts */
+
+  /* Hide buttons with A/B testing attribute initially to prevent flicker */
+  [data-ab-button='true'] {
+    opacity: 0 !important;
+    transition: opacity 0.3s ease;
+  }
+
+  /* Fallback: Show buttons after 2.5s if script fails */
+  @keyframes show-button-fallback {
+    0% {
+      opacity: 0;
+    }
+    100% {
+      opacity: 1;
+    }
+  }
+
+  [data-ab-button='true'] {
+    animation: show-button-fallback 0s 2.5s forwards;
+  }
+</style>
+<script>
+  amplitude.logEvent('viewed website homepage');
+</script>
+
+<style>
+  /* Hide both Webflow variants immediately to prevent flicker */
+  .main-wrapper.control,
+  .main-wrapper.variant {
+    display: none !important;
+    opacity: 0;
+    transform: translateY(12px);
+  }
+
+  /* Show control when the flag resolves to control or fallback */
+  html[data-ph-variant='control'] .main-wrapper.control {
+    display: block !important;
+    animation: phFadeInUp 400ms ease-out forwards;
+  }
+
+  /* Show variant when the flag resolves to variant/test */
+  html[data-ph-variant='variant'] .main-wrapper.variant {
+    display: block !important;
+    animation: phFadeInUp 400ms ease-out forwards;
+  }
+
+  @keyframes phFadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(12px);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html[data-ph-variant='control'] .main-wrapper.control,
+    html[data-ph-variant='variant'] .main-wrapper.variant {
+      animation: none;
+      opacity: 1;
+      transform: none;
+    }
+  }
+</style>
+<script>
+  window.addEventListener('DOMContentLoaded', function () {
+    var FLAG_KEY = 'home-redesign-real-photo';
+    var FALLBACK_TIMEOUT_MS = 2000;
+
+    var resolved = false;
+    var fallbackTimer;
+    var currentFlagValue = 'control';
+
+    function showVariant(variant) {
+      if (resolved) return;
+
+      resolved = true;
+      window.clearTimeout(fallbackTimer);
+
+      document.documentElement.setAttribute(
+        'data-ph-variant',
+        variant === 'test' || variant === 'variant' || variant === true
+          ? 'variant'
+          : 'control'
+      );
+    }
+
+    function fallbackToControl() {
+      showVariant('control');
+    }
+
+    fallbackTimer = window.setTimeout(fallbackToControl, FALLBACK_TIMEOUT_MS);
+
+    try {
+      if (
+        window.posthog &&
+        typeof window.posthog.onFeatureFlags === 'function' &&
+        typeof window.posthog.getFeatureFlag === 'function'
+      ) {
+        window.posthog.onFeatureFlags(
+          function (_flags, _flagVariants, options) {
+            if (resolved) return;
+
+            if (options && options.errorsLoading) {
+              fallbackToControl();
+              return;
+            }
+
+            var flagValue = window.posthog.getFeatureFlag(FLAG_KEY);
+            currentFlagValue = flagValue || 'control';
+
+            if (
+              flagValue === 'test' ||
+              flagValue === 'variant' ||
+              flagValue === true
+            ) {
+              showVariant('variant');
+            } else {
+              showVariant('control');
+            }
+          }
+        );
+      } else {
+        fallbackToControl();
+      }
+    } catch (e) {
+      fallbackToControl();
+    }
+
+    document.addEventListener('click', function (event) {
+      var link = event.target.closest && event.target.closest('a[href]');
+      if (!link) return;
+
+      try {
+        var url = new URL(link.getAttribute('href'), window.location.href);
+        if (url.pathname !== '/welcome-form') return;
+
+        url.searchParams.set('ab_variant', currentFlagValue);
+        url.searchParams.set('exp_name', FLAG_KEY);
+        link.href = url.toString();
+      } catch (e) {}
+    });
+  });
+</script>

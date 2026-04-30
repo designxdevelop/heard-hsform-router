@@ -1,0 +1,1356 @@
+<!--
+  heard-bc-variant.html
+  ─────────────────────────────────────────────────────────────────
+  Chat widget — variant for the /book-consult experiment.
+  This is the existing experience on the page (shown by default).
+
+  PLACEMENT: Inside Webflow div id="bc-variant" (Display: Block by default)
+  ─────────────────────────────────────────────────────────────────
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link
+  href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap"
+  rel="stylesheet"
+/>
+<style>
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+  /* ── Centering wrapper ── */
+  #widget-wrap {
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    width: 100%;
+    padding: 40px 20px;
+  }
+
+  /* ── Widget shell ── */
+  #widget {
+    font-family:
+      'Inter',
+      'Helvetica Neue',
+      Arial,
+      -apple-system,
+      sans-serif;
+    width: 100%;
+    max-width: 760px;
+    height: 660px;
+    background: #fff;
+    border-radius: 18px;
+    box-shadow: 0 8px 40px rgba(0, 0, 0, 0.13);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* ── Mobile: padded, tall ── */
+  @media (max-width: 767px) {
+    #widget-wrap {
+      padding: 16px;
+    }
+    #widget {
+      border-radius: 14px;
+      width: 100%;
+      max-width: 100%;
+      height: 88vh;
+      height: 88svh;
+      height: 88dvh;
+    }
+    #feed {
+      padding: 16px 16px 10px;
+    }
+    #controls {
+      padding: 10px 16px max(16px, env(safe-area-inset-bottom));
+    }
+    /* Fix header text stacking on mobile */
+    #header-text {
+      min-width: 0;
+      flex: 1;
+      overflow: hidden;
+    }
+    #header-name {
+      font-size: 14px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    #header-sub {
+      font-size: 11px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    /* Tighter checkboxes + choices on mobile */
+    .ms-item {
+      padding: 4px 6px;
+      font-size: 12px;
+      gap: 6px;
+    }
+    .ms-checkbox {
+      width: 14px;
+      height: 14px;
+      flex-shrink: 0;
+    }
+    .ms-label {
+      font-size: 12px;
+      line-height: 1.3;
+    }
+    .btn-choice {
+      padding: 5px 10px;
+      font-size: 12px;
+      min-height: 0;
+      line-height: 1.3;
+    }
+    .choices {
+      gap: 5px;
+    }
+    .multiselect {
+      gap: 5px;
+    }
+    .btn-ms-submit {
+      padding: 9px;
+      font-size: 13px;
+    }
+  }
+  /* ── Header ── */
+  #header {
+    background: #1a7a5e;
+    padding: 14px 18px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+  }
+  #btn-startover {
+    margin-left: auto;
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.65);
+    font-size: 13px;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 6px;
+    transition:
+      color 0.15s,
+      background 0.15s;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  #btn-startover:hover {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.15);
+  }
+  #header-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    font-weight: 700;
+    color: #fff;
+    flex-shrink: 0;
+  }
+  #header-text {
+    color: #fff;
+  }
+  #header-name {
+    font-size: 15px;
+    font-weight: 600;
+  }
+  #header-sub {
+    font-size: 12px;
+    opacity: 0.75;
+    margin-top: 1px;
+  }
+  /* ── Progress bar ── */
+  #progress-bar {
+    height: 3px;
+    background: #d4ece3;
+    flex-shrink: 0;
+  }
+  #progress-fill {
+    height: 100%;
+    background: #52b38a;
+    width: 0%;
+    transition: width 0.5s ease;
+  }
+  /* ── Feed ── */
+  #feed {
+    flex: 1;
+    overflow-y: auto;
+    padding: 18px 14px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  #feed::-webkit-scrollbar {
+    width: 4px;
+  }
+  #feed::-webkit-scrollbar-thumb {
+    background: #ddd;
+    border-radius: 2px;
+  }
+  /* ── Chat bubbles ── */
+  .bubble-row {
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
+  }
+  .bubble-row.bot {
+    justify-content: flex-start;
+  }
+  .bubble-row.user {
+    justify-content: flex-end;
+  }
+  .bot-avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: #1a7a5e;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+    color: #fff;
+    flex-shrink: 0;
+  }
+  .bubble {
+    padding: 10px 13px;
+    border-radius: 16px;
+    font-size: 14px;
+    line-height: 1.55;
+    max-width: 80%;
+  }
+  .bubble.bot {
+    background: #f3f4f6;
+    color: #1a2b2a;
+    border-bottom-left-radius: 4px;
+  }
+  .bubble.user {
+    background: #1a7a5e;
+    color: #fff;
+    border-bottom-right-radius: 4px;
+  }
+  /* ── Fact / Did You Know bubble ── */
+  .fact-bubble {
+    background: #ebf5ef;
+    border-radius: 12px;
+    padding: 12px 14px;
+    font-size: 13px;
+    line-height: 1.55;
+    color: #1a2b2a;
+    max-width: 85%;
+    margin-left: 0;
+  }
+  .fact-label {
+    font-size: 10px;
+    font-weight: 700;
+    color: #1a7a5e;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    margin-bottom: 5px;
+  }
+  .fact-bubble strong {
+    color: #1a7a5e;
+  }
+  /* ── Summary card (in feed) ── */
+  .summary-card {
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 12px 14px;
+    font-size: 13px;
+    line-height: 1.5;
+    max-width: 85%;
+    margin-left: 0;
+  }
+  .summary-row {
+    display: flex;
+    gap: 8px;
+    padding: 5px 0;
+    border-bottom: 1px solid #f3f4f6;
+  }
+  .summary-row:last-child {
+    border-bottom: none;
+  }
+  .summary-label {
+    color: #6b7280;
+    width: 90px;
+    flex-shrink: 0;
+    font-size: 12px;
+  }
+  .summary-value {
+    color: #1a2b2a;
+    font-weight: 500;
+  }
+  /* ── Typing indicator ── */
+  .typing-row {
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
+  }
+  .typing-dots {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 11px 14px;
+    background: #f3f4f6;
+    border-radius: 16px;
+    border-bottom-left-radius: 4px;
+  }
+  .typing-dots span {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #9ca3af;
+    animation: tdot 0.9s infinite;
+  }
+  .typing-dots span:nth-child(2) {
+    animation-delay: 0.2s;
+  }
+  .typing-dots span:nth-child(3) {
+    animation-delay: 0.4s;
+  }
+  @keyframes tdot {
+    0%,
+    60%,
+    100% {
+      transform: translateY(0);
+    }
+    30% {
+      transform: translateY(-5px);
+    }
+  }
+  /* ── Controls area ── */
+  #controls {
+    padding: 10px 14px 14px;
+    flex-shrink: 0;
+    border-top: 1px solid #f3f4f6;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0;
+  }
+  /* Start button */
+  .btn-start {
+    width: auto;
+    padding: 11px 22px;
+    background: #e8622a;
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+    align-self: flex-end;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
+  }
+  .btn-start:hover {
+    background: #cf5524;
+  }
+  .btn-start:disabled {
+    background: #9ca3af;
+    cursor: not-allowed;
+  }
+  /* Single-select choices */
+  .choices {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    width: 100%;
+  }
+  .input-hint {
+    font-size: 12px;
+    color: #888;
+    margin-top: 6px;
+    padding: 0 2px;
+    line-height: 1.4;
+  }
+  .btn-choice {
+    width: 100%;
+    padding: 10px 13px;
+    background: #fff;
+    color: #1a2b2a;
+    border: 1.5px solid #e5e7eb;
+    border-radius: 10px;
+    font-size: 14px;
+    text-align: left;
+    cursor: pointer;
+    transition: all 0.15s;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
+  }
+  .btn-choice:hover:not(:disabled) {
+    border-color: #1a7a5e;
+    background: #ebf5ef;
+    color: #1a7a5e;
+  }
+  .btn-choice:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  /* Multiselect */
+  .multiselect {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    width: 100%;
+  }
+  .ms-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 12px;
+    border: 1.5px solid #e5e7eb;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.15s;
+    user-select: none;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
+  }
+  .ms-item:hover {
+    border-color: #1a7a5e;
+    background: #f9fefb;
+  }
+  .ms-item.selected {
+    border-color: #1a7a5e;
+    background: #ebf5ef;
+  }
+  .ms-checkbox {
+    width: 18px;
+    height: 18px;
+    border: 2px solid #d1d5db;
+    border-radius: 4px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+  }
+  .ms-item.selected .ms-checkbox {
+    background: #1a7a5e;
+    border-color: #1a7a5e;
+  }
+  .ms-check {
+    display: none;
+  }
+  .ms-item.selected .ms-check {
+    display: block;
+  }
+  .ms-label {
+    font-size: 14px;
+    color: #1a2b2a;
+  }
+  .btn-ms-submit {
+    width: auto;
+    padding: 11px 22px;
+    margin-top: 8px;
+    background: #e8622a;
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+    grid-column: 1 / -1; /* span both grid columns */
+    justify-self: end; /* right-align within the grid */
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
+  }
+  .btn-ms-submit:disabled {
+    background: #9ca3af;
+    cursor: not-allowed;
+  }
+  .btn-ms-submit:hover:not(:disabled) {
+    background: #cf5524;
+  }
+  /* Text / email / phone inputs */
+  .input-row {
+    display: flex;
+    gap: 8px;
+    width: 100%;
+  }
+  .text-input {
+    flex: 1;
+    padding: 11px 13px;
+    border: 1.5px solid #e5e7eb;
+    border-radius: 10px;
+    font-size: 16px;
+    outline: none; /* 16px prevents iOS auto-zoom on focus */
+    touch-action: manipulation; /* suppresses double-tap zoom */
+    transition: border 0.15s;
+  }
+  .text-input:focus {
+    border-color: #1a7a5e;
+  }
+  .btn-go {
+    padding: 11px 16px;
+    background: #e8622a;
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
+  }
+  .btn-go:hover {
+    background: #cf5524;
+  }
+  /* CTA */
+  .btn-cta {
+    width: auto;
+    padding: 11px 22px;
+    margin-top: 10px;
+    background: #e8622a;
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+    align-self: flex-end;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
+  }
+  .btn-cta:hover:not(:disabled) {
+    background: #cf5524;
+  }
+  .btn-cta:disabled {
+    background: #9ca3af;
+    cursor: not-allowed;
+  }
+  /* Input sub-note (spam notice, opt-in copy) */
+  .input-note {
+    font-size: 11px;
+    color: #9ca3af;
+    margin-top: 7px;
+    text-align: center;
+    line-height: 1.5;
+    width: 100%;
+  }
+</style>
+<div id="widget-wrap">
+  <div id="widget">
+    <div id="header">
+      <div id="header-avatar">H</div>
+      <div id="header-text">
+        <div id="header-name">Heard Assistant</div>
+        <div id="header-sub">Book a free consult · Takes Two Minutes</div>
+      </div>
+      <button id="btn-startover" onclick="location.reload()" title="Start over">
+        ↺ Start over
+      </button>
+    </div>
+    <div id="progress-bar"><div id="progress-fill"></div></div>
+    <div id="feed"></div>
+    <div id="controls"></div>
+  </div>
+  <script>
+    // ─── CONFIG ───────────────────────────────────────────────────────────────────
+    var CONFIG = {
+      posthog: {
+        apiKey: 'phc_iPG1CFswhWTN16Q1f3uwTaNehTzqCP3ilgVEuggQwRN',
+        host: 'https://app.posthog.com',
+      },
+      hubspot: {
+        portalId: '7507639',
+        formGuid: 'b74d90ab-8170-4048-9805-4103465c175a',
+      },
+      consultationUrl:
+        'https://www.joinheard.com/thank-you/schedule?ps_xid=E4uvtlkZA5jbOZ',
+      taxCenterUrl: 'https://www.joinheard.com/therapist-tax-center',
+    };
+    // ─── STATE ────────────────────────────────────────────────────────────────────
+    var state = {
+      firstName: '',
+      lastName: '',
+      revenue: '',
+      painPoints: [],
+      email: '',
+      phone: '',
+    };
+    // ─── UTM + ATTRIBUTION ────────────────────────────────────────────────────────
+    var utmParams = {};
+    (function () {
+      var s = new URLSearchParams(window.location.search);
+      [
+        'utm_source',
+        'utm_medium',
+        'utm_campaign',
+        'utm_content',
+        'utm_term',
+        'ps_xid',
+        'ab_variant',
+        'exp_name',
+      ].forEach(function (k) {
+        var v = s.get(k);
+        if (v) utmParams[k] = v;
+      });
+    })();
+    function getHutk() {
+      var m = document.cookie.match(/hubspotutk=([^;]+)/);
+      return m ? m[1] : '';
+    }
+    // ─── ANALYTICS ────────────────────────────────────────────────────────────────
+    function track(event, props) {
+      try {
+        if (window.posthog) window.posthog.capture(event, props || {});
+      } catch (e) {}
+    }
+    var completedFired = false;
+    // Direct REST beacon — survives page navigation, works even if PostHog SDK
+    // is in a stub/queue state. Reads distinct_id from SDK or localStorage.
+    function phSendBeacon(eventName, props) {
+      var distinctId = 'anonymous';
+      try {
+        if (window.posthog && window.posthog.get_distinct_id) {
+          distinctId = window.posthog.get_distinct_id() || distinctId;
+        } else {
+          var ls = localStorage.getItem(
+            'ph_' + CONFIG.posthog.apiKey + '_posthog'
+          );
+          if (ls) {
+            var ph = JSON.parse(ls);
+            if (ph && ph.distinct_id) distinctId = ph.distinct_id;
+          }
+        }
+      } catch (e) {}
+      var payload = JSON.stringify({
+        api_key: CONFIG.posthog.apiKey,
+        event: eventName,
+        distinct_id: distinctId,
+        properties: Object.assign({ ab_variant: 'variant' }, props || {}),
+      });
+      try {
+        if (navigator.sendBeacon) {
+          navigator.sendBeacon(
+            CONFIG.posthog.host + '/capture/',
+            new Blob([payload], { type: 'application/json' })
+          );
+        } else {
+          fetch(CONFIG.posthog.host + '/capture/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: payload,
+            keepalive: true,
+          }).catch(function () {});
+        }
+      } catch (e) {}
+    }
+    function trackCompleted() {
+      if (completedFired) return;
+      completedFired = true;
+      track('consult-form-completed', {}); // PostHog SDK path
+      phSendBeacon('consult-form-completed', {}); // direct REST fallback
+      console.log('[BC AB] consult-form-completed fired (variant)');
+    }
+    // ─── HELPERS ──────────────────────────────────────────────────────────────────
+    function isHighRevenue() {
+      return (
+        state.revenue === '$50,000–$99,999' ||
+        state.revenue === 'More than $100,000'
+      );
+    }
+    // ─── DOM REFS ─────────────────────────────────────────────────────────────────
+    var feed = document.getElementById('feed');
+    var controls = document.getElementById('controls');
+    var progressFill = document.getElementById('progress-fill');
+    // ─── SCROLL ───────────────────────────────────────────────────────────────────
+    function scrollBottom() {
+      if (!feed) return;
+      requestAnimationFrame(function () {
+        if (feed) feed.scrollTop = feed.scrollHeight;
+      });
+    }
+    if (feed) {
+      new MutationObserver(function () {
+        var gap = feed.scrollHeight - feed.scrollTop - feed.clientHeight;
+        if (gap < 140) scrollBottom();
+      }).observe(feed, { childList: true, subtree: true });
+      // ResizeObserver: only available in Safari 13.4+ — guard to prevent crash on older iOS
+      if (typeof ResizeObserver !== 'undefined') {
+        new ResizeObserver(function () {
+          scrollBottom();
+        }).observe(feed);
+      }
+    }
+    // ─── BUBBLE HELPERS ───────────────────────────────────────────────────────────
+    function makeAvatar() {
+      var av = document.createElement('div');
+      av.className = 'bot-avatar';
+      av.textContent = 'H';
+      return av;
+    }
+    function addBotBubble(text) {
+      var row = document.createElement('div');
+      row.className = 'bubble-row bot';
+      var bub = document.createElement('div');
+      bub.className = 'bubble bot';
+      bub.textContent = text;
+      row.appendChild(bub);
+      feed.appendChild(row);
+      scrollBottom();
+    }
+    function addUserBubble(text) {
+      var row = document.createElement('div');
+      row.className = 'bubble-row user';
+      var bub = document.createElement('div');
+      bub.className = 'bubble user';
+      bub.textContent = text;
+      row.appendChild(bub);
+      feed.appendChild(row);
+      scrollBottom();
+    }
+    function addFactBubble(html) {
+      var wrap = document.createElement('div');
+      wrap.className = 'fact-bubble';
+      var lbl = document.createElement('div');
+      lbl.className = 'fact-label';
+      lbl.textContent = 'Did you know?';
+      var body = document.createElement('div');
+      body.innerHTML = html;
+      wrap.appendChild(lbl);
+      wrap.appendChild(body);
+      feed.appendChild(wrap);
+      scrollBottom();
+    }
+    function addTyping() {
+      var row = document.createElement('div');
+      row.className = 'typing-row';
+      var dots = document.createElement('div');
+      dots.className = 'typing-dots';
+      for (var i = 0; i < 3; i++) {
+        var s = document.createElement('span');
+        dots.appendChild(s);
+      }
+      row.appendChild(dots);
+      feed.appendChild(row);
+      scrollBottom();
+      return row;
+    }
+    // ─── MESSAGE PLAYER ───────────────────────────────────────────────────────────
+    function playMessages(messages, done) {
+      var i = 0;
+      function next() {
+        if (i >= messages.length) {
+          if (done) setTimeout(done, 250);
+          return;
+        }
+        var msg =
+          typeof messages[i] === 'function' ? messages[i]() : messages[i];
+        i++;
+        if (!msg) {
+          next();
+          return;
+        }
+        if (typeof msg === 'object' && msg.fact) {
+          var t = addTyping();
+          setTimeout(function () {
+            if (t.parentNode) feed.removeChild(t);
+            addFactBubble(msg.fact);
+            setTimeout(next, 400);
+          }, 900);
+        } else {
+          var delay = 500 + Math.min(msg.length * 6, 700);
+          var t2 = addTyping();
+          setTimeout(function () {
+            if (t2.parentNode) feed.removeChild(t2);
+            addBotBubble(msg);
+            setTimeout(next, msg.length > 80 ? 450 : 300);
+          }, delay);
+        }
+      }
+      setTimeout(next, 350);
+    }
+    // ─── HUBSPOT SUBMISSIONS ──────────────────────────────────────────────────────
+    function partialHubSpotSubmit() {
+      if (
+        !CONFIG.hubspot.portalId ||
+        CONFIG.hubspot.portalId === 'YOUR_HUBSPOT_PORTAL_ID'
+      )
+        return;
+      var fields = [
+        { name: 'firstname', value: state.firstName },
+        { name: 'lastname', value: state.lastName },
+        { name: 'email', value: state.email },
+        { name: 'ab_variant', value: utmParams.ab_variant || 'variant' },
+        { name: 'exp_name', value: utmParams.exp_name || '' },
+      ];
+      fetch(
+        'https://api.hsforms.com/submissions/v3/integration/submit/' +
+          CONFIG.hubspot.portalId +
+          '/' +
+          CONFIG.hubspot.formGuid,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            fields: fields,
+            context: {
+              hutk: getHutk(),
+              pageUri: window.location.href,
+              pageName: 'Heard Consult Chat',
+            },
+          }),
+        }
+      )
+        .then(function (r) {
+          return r.text().then(function (t) {
+            if (!r.ok) console.error('[HS partial] ' + r.status, t);
+            else console.log('[HS partial] OK');
+          });
+        })
+        .catch(function (e) {
+          console.error('[HS partial] fetch error', e);
+        });
+    }
+    var revenueHsMap = {
+      "None — I'm just getting started": 'None',
+      'Under $25,000': 'Less than $20,000',
+      '$25,000–$49,999': '$20,000 - $99,999',
+      '$50,000–$99,999': '$50,000 - $99,999',
+      'More than $100,000': 'More than $100,000',
+    };
+    function hsRevenue() {
+      return revenueHsMap[state.revenue] || state.revenue;
+    }
+    var painPointsHsMap = {
+      'Tax support': 'Tax support',
+    };
+    function hsPainPoints() {
+      return state.painPoints
+        .map(function (p) {
+          return painPointsHsMap[p] || p;
+        })
+        .join(';');
+    }
+    function submitToHubSpot() {
+      if (
+        !CONFIG.hubspot.portalId ||
+        CONFIG.hubspot.portalId === 'YOUR_HUBSPOT_PORTAL_ID'
+      )
+        return;
+      var allFields = [
+        { name: 'firstname', value: state.firstName },
+        { name: 'lastname', value: state.lastName },
+        { name: 'email', value: state.email },
+        { name: 'phone', value: state.phone },
+        {
+          name: 'what_support_are_you_most_interested_in_from_heard_',
+          value: hsPainPoints(),
+        },
+        {
+          name: 'what_is_your_expected_annual_income_for_2024___1099__private_practice_',
+          value: hsRevenue(),
+        },
+        {
+          name: 'consult_form_submission_date',
+          value: new Date().toISOString().split('T')[0],
+        },
+        { name: 'utm_source', value: utmParams.utm_source || '' },
+        { name: 'utm_medium', value: utmParams.utm_medium || '' },
+        { name: 'utm_campaign', value: utmParams.utm_campaign || '' },
+        { name: 'utm_content', value: utmParams.utm_content || '' },
+        { name: 'utm_term', value: utmParams.utm_term || '' },
+        { name: 'ps_xid', value: utmParams.ps_xid || '' },
+        { name: 'ab_variant', value: utmParams.ab_variant || 'variant' },
+        { name: 'exp_name', value: utmParams.exp_name || '' },
+      ].filter(function (f) {
+        return f.value !== '';
+      });
+      fetch(
+        'https://api.hsforms.com/submissions/v3/integration/submit/' +
+          CONFIG.hubspot.portalId +
+          '/' +
+          CONFIG.hubspot.formGuid,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            fields: allFields,
+            context: {
+              hutk: getHutk(),
+              pageUri: window.location.href,
+              pageName: 'Heard Consult Chat',
+            },
+          }),
+        }
+      )
+        .then(function (r) {
+          return r.text().then(function (t) {
+            if (!r.ok) console.error('[HS full] ' + r.status, t);
+            else {
+              console.log('[HS full] OK');
+              // consult-form-completed already fired synchronously at phone submission
+            }
+          });
+        })
+        .catch(function (e) {
+          console.error('[HS full] fetch error', e);
+        });
+    }
+    // ─── PROGRESS ─────────────────────────────────────────────────────────────────
+    function setProgress(pct) {
+      if (progressFill) progressFill.style.width = Math.min(pct, 100) + '%';
+    }
+    function clearControls() {
+      if (controls) controls.innerHTML = '';
+    }
+    // ─── CONTROL RENDERERS ────────────────────────────────────────────────────────
+    function renderStart(label, onClick) {
+      clearControls();
+      var btn = document.createElement('button');
+      btn.className = 'btn-start';
+      btn.textContent = label;
+      var fired = false;
+      function handleActivate(e) {
+        if (e && e.type === 'touchend') e.preventDefault(); // prevent ghost click + 300ms delay
+        if (fired || btn.disabled) return;
+        fired = true;
+        btn.disabled = true;
+        try {
+          onClick();
+        } catch (err) {
+          console.error('[BC widget] renderStart error:', err);
+        }
+      }
+      btn.addEventListener('touchend', handleActivate, { passive: false });
+      btn.addEventListener('click', handleActivate);
+      controls.appendChild(btn);
+      setTimeout(scrollBottom, 50);
+    }
+    function renderChoices(options, onSelect, hint) {
+      clearControls();
+      var wrap = document.createElement('div');
+      wrap.className = 'choices';
+      options.forEach(function (opt) {
+        var btn = document.createElement('button');
+        btn.className = 'btn-choice';
+        btn.textContent = opt;
+        var fired = false;
+        function handleActivate(e) {
+          if (e && e.type === 'touchend') e.preventDefault();
+          if (fired) return;
+          fired = true;
+          wrap.querySelectorAll('button').forEach(function (b) {
+            b.disabled = true;
+          });
+          clearControls();
+          onSelect(opt);
+        }
+        btn.addEventListener('touchend', handleActivate, { passive: false });
+        btn.addEventListener('click', handleActivate);
+        wrap.appendChild(btn);
+      });
+      controls.appendChild(wrap);
+      if (hint) {
+        var h = document.createElement('p');
+        h.className = 'input-hint';
+        h.textContent = hint;
+        controls.appendChild(h);
+      }
+      setTimeout(scrollBottom, 50);
+    }
+    function renderMultiselect(options, onSubmit) {
+      clearControls();
+      var selected = [];
+      var wrap = document.createElement('div');
+      wrap.className = 'multiselect';
+      options.forEach(function (opt) {
+        var item = document.createElement('div');
+        item.className = 'ms-item';
+        var cb = document.createElement('div');
+        cb.className = 'ms-checkbox';
+        var chk = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        chk.setAttribute('class', 'ms-check');
+        chk.setAttribute('viewBox', '0 0 12 12');
+        chk.setAttribute('width', '12');
+        chk.setAttribute('height', '12');
+        var poly = document.createElementNS(
+          'http://www.w3.org/2000/svg',
+          'polyline'
+        );
+        poly.setAttribute('points', '1.5,6 4.5,9 10.5,3');
+        poly.setAttribute('fill', 'none');
+        poly.setAttribute('stroke', 'white');
+        poly.setAttribute('stroke-width', '2');
+        poly.setAttribute('stroke-linecap', 'round');
+        chk.appendChild(poly);
+        cb.appendChild(chk);
+        var lbl = document.createElement('span');
+        lbl.className = 'ms-label';
+        lbl.textContent = opt;
+        item.appendChild(cb);
+        item.appendChild(lbl);
+        function toggleItem(e) {
+          if (e && e.type === 'touchend') e.preventDefault();
+          var idx = selected.indexOf(opt);
+          if (idx === -1) {
+            selected.push(opt);
+            item.classList.add('selected');
+          } else {
+            selected.splice(idx, 1);
+            item.classList.remove('selected');
+          }
+          goBtn.disabled = selected.length === 0;
+        }
+        item.addEventListener('touchend', toggleItem, { passive: false });
+        item.addEventListener('click', toggleItem);
+        wrap.appendChild(item);
+      });
+      var goBtn = document.createElement('button');
+      goBtn.className = 'btn-ms-submit';
+      goBtn.textContent = 'Continue →';
+      goBtn.disabled = true;
+      var goBtnFired = false;
+      function goBtnActivate(e) {
+        if (e && e.type === 'touchend') e.preventDefault();
+        if (goBtnFired || selected.length === 0) return;
+        goBtnFired = true;
+        clearControls();
+        onSubmit(selected.slice());
+      }
+      goBtn.addEventListener('touchend', goBtnActivate, { passive: false });
+      goBtn.addEventListener('click', goBtnActivate);
+      wrap.appendChild(goBtn);
+      controls.appendChild(wrap);
+      setTimeout(scrollBottom, 50);
+    }
+    function renderTextInput(type, placeholder, onSubmit, note) {
+      clearControls();
+      var row = document.createElement('div');
+      row.className = 'input-row';
+      var inp = document.createElement('input');
+      inp.type = type;
+      inp.placeholder = placeholder;
+      inp.className = 'text-input';
+      var btn = document.createElement('button');
+      btn.className = 'btn-go';
+      btn.textContent = '→';
+      var goFired = false;
+      function go(e) {
+        if (e && e.type === 'touchend') e.preventDefault();
+        var v = inp.value.trim();
+        if (!v) return;
+        if (type === 'email') {
+          if (!/^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/.test(v)) {
+            goFired = false; // allow retry after validation error
+            inp.style.borderColor = '#EF4444';
+            inp.value = '';
+            inp.placeholder = 'Please enter a valid email';
+            setTimeout(function () {
+              inp.style.borderColor = '';
+              inp.placeholder = 'your@email.com';
+            }, 2500);
+            return;
+          }
+        }
+        if (type === 'tel') {
+          var digits = v.replace(/\D/g, '');
+          if (digits.length < 10) {
+            goFired = false; // allow retry after validation error
+            inp.style.borderColor = '#EF4444';
+            inp.value = '';
+            inp.placeholder = 'Enter a valid phone number';
+            setTimeout(function () {
+              inp.style.borderColor = '';
+              inp.placeholder = 'Phone number';
+            }, 2500);
+            return;
+          }
+        }
+        if (goFired) return;
+        goFired = true;
+        clearControls();
+        onSubmit(v);
+      }
+      btn.addEventListener('touchend', go, { passive: false });
+      btn.addEventListener('click', go);
+      inp.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') go();
+      });
+      row.appendChild(inp);
+      row.appendChild(btn);
+      controls.appendChild(row);
+      if (note) {
+        var noteEl = document.createElement('div');
+        noteEl.className = 'input-note';
+        noteEl.textContent = note;
+        controls.appendChild(noteEl);
+      }
+      // Don't auto-focus on touch devices — iOS blocks programmatic focus in async
+      // chains and it causes keyboard/layout issues. Users tap the input themselves.
+      setTimeout(function () {
+        if (!('ontouchstart' in window)) inp.focus();
+        scrollBottom();
+      }, 80);
+    }
+    // ─── STEPS ────────────────────────────────────────────────────────────────────
+    function stepWelcome() {
+      setProgress(5);
+      playMessages(
+        [
+          "Hi there! Let's find the right financial support for your practice. A few quick questions will help us make the most of your free consult.",
+        ],
+        function () {
+          renderStart("Let's get started →", function () {
+            track('consult_form_started', utmParams);
+            stepFirstName();
+          });
+        }
+      );
+    }
+    function stepFirstName() {
+      setProgress(15);
+      playMessages(
+        ["Let's start with the basics. What's your first name?"],
+        function () {
+          renderTextInput('text', 'First name', function (val) {
+            state.firstName = val;
+            addUserBubble(state.firstName);
+            playMessages(['Nice to meet you, ' + val + '!'], stepLastName);
+          });
+        }
+      );
+    }
+    function stepLastName() {
+      setProgress(27);
+      playMessages(['And your last name?'], function () {
+        renderTextInput('text', 'Last name', function (val) {
+          state.lastName = val;
+          addUserBubble(state.lastName);
+          playMessages([null], stepRevenue);
+        });
+      });
+    }
+    function stepRevenue() {
+      setProgress(42);
+      playMessages(
+        [
+          {
+            fact: "You're in good company. Heard works with <strong>thousands of therapists</strong> in private practice across the country.",
+          },
+          'Roughly, how much is your practice expected to make this year?',
+        ],
+        function () {
+          renderChoices(
+            [
+              "None — I'm just getting started",
+              'Under $25,000',
+              '$25,000–$49,999',
+              '$50,000–$99,999',
+              'More than $100,000',
+            ],
+            function (val) {
+              state.revenue = val;
+              addUserBubble(val);
+              playMessages([null], stepPainPoints);
+            },
+            'This includes any income you earn as 1099 (contractor) or self-employed.'
+          );
+        }
+      );
+    }
+    function stepPainPoints() {
+      setProgress(57);
+      playMessages(
+        [
+          'What feels like the biggest challenge right now? Pick everything that applies.',
+        ],
+        function () {
+          renderMultiselect(
+            [
+              'Bookkeeping',
+              'Tax support',
+              'Payroll',
+              'S corp support',
+              'Business banking',
+            ],
+            function (vals) {
+              state.painPoints = vals;
+              addUserBubble(vals.join(', '));
+              playMessages(
+                [
+                  {
+                    fact: 'In 2025, Heard tracked over <strong>$198 million</strong> in deductions for our members. We make sure every one that applies to you gets captured.',
+                  },
+                ],
+                stepEmail
+              );
+            }
+          );
+        }
+      );
+    }
+    function stepEmail() {
+      setProgress(71);
+      var intro = state.firstName ? state.firstName + ', almost' : 'Almost';
+      playMessages(
+        [intro + " there. What's the best email to reach you?"],
+        function () {
+          renderTextInput(
+            'email',
+            'your@email.com',
+            function (val) {
+              state.email = val;
+              addUserBubble(state.email);
+              partialHubSpotSubmit();
+              playMessages([null], stepPhone);
+            },
+            "By sharing your email, you're opting into marketing communications from Heard. You can unsubscribe at any time."
+          );
+        }
+      );
+    }
+    function stepPhone() {
+      setProgress(85);
+      playMessages(
+        ["And your phone number? We'll use this to confirm your consult."],
+        function () {
+          renderTextInput(
+            'tel',
+            'Phone number',
+            function (val) {
+              state.phone = val;
+              addUserBubble(state.phone);
+              submitToHubSpot();
+              trackCompleted(); // fire synchronously — don't wait for async fetch
+              track('consult_form_phone_submitted', { email: state.email });
+              playMessages([null], stepSummary);
+            },
+            'Opt out anytime.'
+          );
+        }
+      );
+    }
+    function stepSummary() {
+      setProgress(95);
+      var valueMap = {
+        Bookkeeping: 'organizing your books and keeping your financials clear',
+        'Tax support':
+          'staying on top of your quarterly estimated taxes and annual filing',
+        Payroll: "handling payroll so it's done right and on time",
+        'S corp support':
+          'figuring out whether an S corp election makes sense for your practice — and helping you set it up right',
+        'Business banking':
+          'setting up a business bank account through a partner to keep your books and taxes accurate',
+      };
+      var priority = isHighRevenue()
+        ? [
+            'S corp support',
+            'Tax support',
+            'Payroll',
+            'Business banking',
+            'Bookkeeping',
+          ]
+        : [
+            'Bookkeeping',
+            'Tax support',
+            'Payroll',
+            'Business banking',
+            'S corp support',
+          ];
+      var chosen = null;
+      for (var pi = 0; pi < priority.length; pi++) {
+        if (state.painPoints.indexOf(priority[pi]) !== -1) {
+          chosen = valueMap[priority[pi]];
+          break;
+        }
+      }
+      if (!chosen) {
+        chosen = isHighRevenue()
+          ? 'lowering your tax bill and making sure your practice is structured to keep more of what you earn'
+          : 'staying on top of your books and quarterly taxes';
+      }
+      var fitMsg1 =
+        "Based on everything you've shared, you're a great fit for Heard. We can help you with " +
+        chosen +
+        ' — and we handle your taxes year-round, too.';
+      var fitMsg2 =
+        'The last step is picking a time that works for your schedule.';
+      playMessages(
+        [
+          {
+            fact: 'A consult with a Heard team member can save you hours of research by answering questions on how to tackle your finances, business and tax structure, and if Heard is right for you.',
+          },
+          fitMsg1,
+          fitMsg2,
+        ],
+        function () {
+          clearControls();
+          setTimeout(function () {
+            var btn = document.createElement('button');
+            btn.className = 'btn-cta';
+            btn.textContent = "Let's book a time →";
+            var ctaFired = false;
+            function ctaActivate(e) {
+              if (e && e.type === 'touchend') e.preventDefault();
+              if (ctaFired || btn.disabled) return;
+              ctaFired = true;
+              btn.disabled = true;
+              addUserBubble("Let's book a time →");
+              var url =
+                CONFIG.consultationUrl +
+                (state.email
+                  ? '&email=' + encodeURIComponent(state.email)
+                  : '') +
+                (state.firstName
+                  ? '&first_name=' + encodeURIComponent(state.firstName)
+                  : '') +
+                (state.lastName
+                  ? '&last_name=' + encodeURIComponent(state.lastName)
+                  : '');
+              setProgress(100);
+              trackCompleted(); // no-op if already fired at phone step; fires here if somehow missed
+              // window.open(url, '_blank') is blocked by Safari's popup blocker
+              // even inside a direct event handler. Use assign() instead — same-tab
+              // navigation is always allowed and avoids the blank-page / blocked state.
+              window.location.assign(url);
+            }
+            btn.addEventListener('touchend', ctaActivate, { passive: false });
+            btn.addEventListener('click', ctaActivate);
+            controls.appendChild(btn);
+            setTimeout(scrollBottom, 50);
+          }, 400);
+        }
+      );
+    }
+    // ─── LAUNCH ───────────────────────────────────────────────────────────────────
+    // Re-resolve DOM refs at launch time in case script ran before DOM was ready
+    // (can happen in Webflow embeds on slow iOS connections)
+    function launchWidget() {
+      if (!feed) feed = document.getElementById('feed');
+      if (!controls) controls = document.getElementById('controls');
+      if (!progressFill)
+        progressFill = document.getElementById('progress-fill');
+      if (!feed || !controls || !progressFill) {
+        console.warn('[BC widget] DOM not ready, retrying in 100ms…');
+        setTimeout(launchWidget, 100);
+        return;
+      }
+      stepWelcome();
+    }
+    if (!window.__heardWidgetInit) {
+      window.__heardWidgetInit = true;
+      launchWidget();
+    }
+  </script>
+</div>
