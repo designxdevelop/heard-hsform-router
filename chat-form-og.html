@@ -598,8 +598,6 @@
         'utm_content',
         'utm_term',
         'ps_xid',
-        'ab_variant',
-        'exp_name',
       ].forEach(function (k) {
         var v = s.get(k);
         if (v) utmParams[k] = v;
@@ -608,15 +606,6 @@
     function getHutk() {
       var m = document.cookie.match(/hubspotutk=([^;]+)/);
       return m ? m[1] : '';
-    }
-    function getHubSpotContext() {
-      var context = {
-        pageUri: window.location.href,
-        pageName: 'Heard Consult Chat',
-      };
-      var hutk = getHutk();
-      if (hutk) context.hutk = hutk;
-      return context;
     }
     // ─── ANALYTICS ────────────────────────────────────────────────────────────────
     function track(event, props) {
@@ -800,8 +789,7 @@
         { name: 'firstname', value: state.firstName },
         { name: 'lastname', value: state.lastName },
         { name: 'email', value: state.email },
-        { name: '0-1/ab_variant', value: utmParams.ab_variant || 'variant' },
-        { name: '0-1/exp_name', value: utmParams.exp_name || '' },
+        { name: 'ab_variant', value: 'variant' },
       ];
       fetch(
         'https://api.hsforms.com/submissions/v3/integration/submit/' +
@@ -813,7 +801,11 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             fields: fields,
-            context: getHubSpotContext(),
+            context: {
+              hutk: getHutk(),
+              pageUri: window.location.href,
+              pageName: 'Heard Consult Chat',
+            },
           }),
         }
       )
@@ -876,8 +868,7 @@
         { name: 'utm_content', value: utmParams.utm_content || '' },
         { name: 'utm_term', value: utmParams.utm_term || '' },
         { name: 'ps_xid', value: utmParams.ps_xid || '' },
-        { name: '0-1/ab_variant', value: utmParams.ab_variant || 'variant' },
-        { name: '0-1/exp_name', value: utmParams.exp_name || '' },
+        { name: 'ab_variant', value: 'variant' },
       ].filter(function (f) {
         return f.value !== '';
       });
@@ -891,7 +882,11 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             fields: allFields,
-            context: getHubSpotContext(),
+            context: {
+              hutk: getHutk(),
+              pageUri: window.location.href,
+              pageName: 'Heard Consult Chat',
+            },
           }),
         }
       )
