@@ -802,7 +802,9 @@
         { name: 'email', value: state.email },
         { name: '0-1/ab_variant', value: utmParams.ab_variant || 'variant' },
         { name: '0-1/exp_name', value: utmParams.exp_name || '' },
-      ];
+      ].filter(function (f) {
+        return f.value !== '';
+      });
       fetch(
         'https://api.hsforms.com/submissions/v3/integration/submit/' +
           CONFIG.hubspot.portalId +
