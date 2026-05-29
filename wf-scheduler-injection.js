@@ -624,19 +624,80 @@
   }
 
   function messageLooksLikeSchedulerSubmission(data) {
-    const raw =
-      typeof data === 'string' ? data : data ? JSON.stringify(data) : '';
+    let raw = '';
+
+    try {
+      raw = typeof data === 'string' ? data : data ? JSON.stringify(data) : '';
+    } catch (e) {
+      raw = String(data || '');
+    }
+
     const message = raw.toLowerCase();
 
     return (
       message.includes('meetingbooksucceeded') ||
+      message.includes('meetingsbooksucceeded') ||
       message.includes('hsmeetingsbooksucceeded') ||
+      message.includes('hsmeetings:meetingbooksucceeded') ||
       message.includes('meeting_booked') ||
+      message.includes('meetings_booked') ||
       message.includes('meetingbooked') ||
+      message.includes('meetingsbooked') ||
       message.includes('meeting booked') ||
+      message.includes('meetings booked') ||
       message.includes('booking confirmed') ||
       message.includes('meeting scheduled')
     );
+  }
+
+  function nodeIsHubSpotMeetingsIframe(node) {
+    return (
+      node &&
+      node.tagName === 'IFRAME' &&
+      node.src &&
+      node.src.includes('meetings.hubspot.com')
+    );
+  }
+
+  function watchMeetingsIframeLoads(target, showHdyhauForm) {
+    const watchedIframes = new WeakSet();
+
+    function watchIframe(iframe) {
+      if (!iframe || watchedIframes.has(iframe)) return;
+
+      watchedIframes.add(iframe);
+
+      let loadCount = 0;
+      const startedAt = Date.now();
+
+      iframe.addEventListener('load', () => {
+        loadCount += 1;
+
+        if (DEBUG) {
+          log('HubSpot Meetings iframe loaded', {
+            loadCount,
+            elapsedMs: Date.now() - startedAt,
+          });
+        }
+
+        if (loadCount < 2 || Date.now() - startedAt < 3000) {
+          return;
+        }
+
+        log('Detected scheduler completion via iframe navigation');
+        showHdyhauForm();
+      });
+    }
+
+    if (nodeIsHubSpotMeetingsIframe(target)) {
+      watchIframe(target);
+    }
+
+    target
+      .querySelectorAll('iframe[src*="meetings.hubspot.com"]')
+      .forEach(watchIframe);
+
+    return watchIframe;
   }
 
   function elementLooksLikeSchedulerConfirmation(element) {
@@ -655,6 +716,7 @@
     if (!target) return;
 
     const showHdyhauForm = () => renderHdyhauForm(formData, target);
+    const watchIframe = watchMeetingsIframeLoads(target, showHdyhauForm);
 
     window.addEventListener('message', (event) => {
       if (!isHubSpotMessageOrigin(event.origin)) return;
@@ -670,6 +732,16 @@
       for (const mutation of mutations) {
         for (const node of mutation.addedNodes) {
           if (node.nodeType !== 1) continue;
+
+          if (nodeIsHubSpotMeetingsIframe(node)) {
+            watchIframe(node);
+          }
+
+          if (node.querySelectorAll) {
+            node
+              .querySelectorAll('iframe[src*="meetings.hubspot.com"]')
+              .forEach(watchIframe);
+          }
 
           if (elementLooksLikeSchedulerConfirmation(node)) {
             log('Detected scheduler completion via DOM mutation');
