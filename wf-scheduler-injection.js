@@ -261,16 +261,69 @@
     const style = document.createElement('style');
     style.id = 'hdyhau-styles';
     style.textContent = `
+      .hdyhau-modal {
+        align-items: center;
+        background: rgba(17, 24, 39, 0.48);
+        box-sizing: border-box;
+        display: flex;
+        inset: 0;
+        justify-content: center;
+        padding: 24px;
+        position: fixed;
+        z-index: 2147483000;
+      }
+
+      .hdyhau-modal[hidden] {
+        display: none;
+      }
+
+      .hdyhau-dialog {
+        background: #fff;
+        border-radius: 8px;
+        box-shadow: 0 24px 80px rgba(17, 24, 39, 0.24);
+        box-sizing: border-box;
+        max-height: min(720px, calc(100vh - 48px));
+        max-width: 640px;
+        overflow: auto;
+        padding: 28px;
+        position: relative;
+        width: 100%;
+      }
+
       .hdyhau-form {
         color: #1a1a1a;
         font-family: inherit;
-        margin: 32px auto 0;
-        max-width: 640px;
         width: 100%;
       }
 
       .hdyhau-form[hidden] {
         display: none;
+      }
+
+      .hdyhau-close {
+        align-items: center;
+        background: transparent;
+        border: 0;
+        border-radius: 8px;
+        color: #4b5563;
+        cursor: pointer;
+        display: flex;
+        font: inherit;
+        font-size: 26px;
+        height: 40px;
+        justify-content: center;
+        line-height: 1;
+        padding: 0;
+        position: absolute;
+        right: 12px;
+        top: 12px;
+        width: 40px;
+      }
+
+      .hdyhau-close:hover,
+      .hdyhau-close:focus {
+        background: #f3f4f6;
+        outline: none;
       }
 
       .hdyhau-question {
@@ -357,6 +410,29 @@
       .hdyhau-status[data-state='error'] {
         color: #b91c1c;
       }
+
+      @media (max-width: 640px) {
+        .hdyhau-modal {
+          align-items: flex-end;
+          padding: 0;
+        }
+
+        .hdyhau-dialog {
+          border-radius: 8px 8px 0 0;
+          max-height: min(84vh, 720px);
+          max-width: none;
+          padding: 24px 18px calc(18px + env(safe-area-inset-bottom));
+        }
+
+        .hdyhau-label {
+          font-size: 17px;
+          padding-right: 40px;
+        }
+
+        .hdyhau-option {
+          padding: 11px 12px;
+        }
+      }
     `;
     document.head.appendChild(style);
   }
@@ -372,6 +448,22 @@
 
     HDYHAU_FORM_RENDERED = true;
     ensureHdyhauStyles();
+
+    const modal = document.createElement('div');
+    modal.id = 'hdyhau-modal';
+    modal.className = 'hdyhau-modal';
+    modal.setAttribute('role', 'dialog');
+    modal.setAttribute('aria-modal', 'true');
+    modal.setAttribute('aria-labelledby', 'hdyhau-question-label');
+
+    const dialog = document.createElement('div');
+    dialog.className = 'hdyhau-dialog';
+
+    const closeButton = document.createElement('button');
+    closeButton.className = 'hdyhau-close';
+    closeButton.type = 'button';
+    closeButton.setAttribute('aria-label', 'Close');
+    closeButton.textContent = '×';
 
     const form = document.createElement('form');
     form.id = 'hdyhau-form';
@@ -399,7 +491,7 @@
     form.innerHTML = `
       <input type="hidden" name="email" value="${escapeHtml(email)}">
       <fieldset class="hdyhau-question">
-        <legend class="hdyhau-label">How did you hear about us?</legend>
+        <legend class="hdyhau-label" id="hdyhau-question-label">How did you hear about us?</legend>
         <div class="hdyhau-options">${optionsHtml}</div>
       </fieldset>
       <div class="hdyhau-other-field" hidden>
@@ -415,18 +507,46 @@
       <div class="hdyhau-status" role="status" aria-live="polite"></div>
     `;
 
-    const insertionTarget =
-      target || document.getElementById('scheduler-target');
-    if (insertionTarget && insertionTarget.parentNode) {
-      insertionTarget.insertAdjacentElement('afterend', form);
-    } else {
-      document.body.appendChild(form);
-    }
+    dialog.appendChild(closeButton);
+    dialog.appendChild(form);
+    modal.appendChild(dialog);
+    document.body.appendChild(modal);
 
     const submitButton = form.querySelector('.hdyhau-submit');
     const otherField = form.querySelector('.hdyhau-other-field');
     const otherInput = form.querySelector('#hdyhau-other-text');
     const status = form.querySelector('.hdyhau-status');
+    const previouslyFocusedElement = document.activeElement;
+
+    function handleHdyhauKeydown(event) {
+      if (event.key === 'Escape' && document.body.contains(modal)) {
+        closeHdyhauModal();
+      }
+    }
+
+    function closeHdyhauModal() {
+      modal.hidden = true;
+      modal.remove();
+      document.removeEventListener('keydown', handleHdyhauKeydown);
+
+      if (
+        previouslyFocusedElement &&
+        typeof previouslyFocusedElement.focus === 'function'
+      ) {
+        previouslyFocusedElement.focus();
+      }
+    }
+
+    closeButton.addEventListener('click', closeHdyhauModal);
+
+    modal.addEventListener('click', (event) => {
+      if (event.target === modal) {
+        closeHdyhauModal();
+      }
+    });
+
+    document.addEventListener('keydown', handleHdyhauKeydown);
+    closeButton.focus();
 
     form.addEventListener('change', () => {
       const selected = form.querySelector(
@@ -462,6 +582,7 @@
             .querySelectorAll('input, button')
             .forEach((field) => (field.disabled = true));
           status.textContent = 'Thanks!';
+          setTimeout(closeHdyhauModal, 1200);
           log('HDYHAU response submitted');
         })
         .catch((error) => {
