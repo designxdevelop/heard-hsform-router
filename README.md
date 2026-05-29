@@ -210,6 +210,7 @@ Create or confirm a HubSpot form with these fields:
 
 - `email`
 - `how_did_you_heard_about_us`
+- `where_did_you_hear_about_heard_` (current form fallback until the form is remapped to `how_did_you_heard_about_us`)
 - `hdyhau_other_text`
 
 The production HDYHAU form is configured in `wf-scheduler-injection.js`:
