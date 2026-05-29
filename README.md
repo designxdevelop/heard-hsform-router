@@ -13,6 +13,7 @@ This project provides a seamless integration between HubSpot forms and HubSpot M
 - **Multistep Form Support**: Robust fallback mechanism for multistep forms, detecting completion via DOM "Thank You" messages when standard callbacks fail
 - **Data Persistence**: Preserves form data across page transitions using localStorage, sessionStorage, and cookies
 - **Scheduler Injection**: Dynamically embeds HubSpot Meeting schedulers with pre-filled information (name, email, company, phone)
+- **Post-scheduling Attribution**: Shows a required “How did you hear about us?” radio form after a scheduler booking is detected and submits the selected value back to HubSpot by email
 - **PartnerStack Tracking**: Automatic ps_xid parameter management for attribution tracking, including hidden form field population
 - **Analytics Integration**: Fires conversion events to Reddit, Meta (Facebook), Google Analytics, PostHog, and Amplitude
 - **Debug Mode**: Built-in draggable debug panel for inspecting stored form data and routing decisions
@@ -197,9 +198,36 @@ Injects and configures HubSpot Meeting schedulers.
 
 - Retrieves stored form data from sessionStorage, localStorage, and cookies
 - Builds enhanced scheduler URLs with prefilled data (name, email, company, phone)
+- Renders the post-scheduling HDYHAU form only after HubSpot Meetings appears to confirm a booking
+- Submits HDYHAU responses to HubSpot with `email`, `how_did_you_hear_about_us`, and optional `hdyhau_other_text` fields
 - Handles fallback to form page if no data exists
 - Fires conversion events to multiple platforms: Reddit, Meta (Facebook), Google Analytics, PostHog, and Amplitude
 - Includes a draggable debug panel (enabled via `?debug=true`) for inspecting stored data and routing decisions
+
+**HDYHAU HubSpot setup:**
+
+Create or confirm a HubSpot form with these fields:
+
+- `email`
+- `how_did_you_hear_about_us`
+- `hdyhau_other_text`
+
+The production HDYHAU form is configured in `wf-scheduler-injection.js`:
+
+```html
+<script
+  src="https://js.hsforms.net/forms/embed/developer/7507639.js"
+  defer
+></script>
+<div
+  class="hs-form-html"
+  data-region="na1"
+  data-form-id="2abfe31d-49b3-433d-9776-4ff663f8c0b9"
+  data-portal-id="7507639"
+></div>
+```
+
+The HDYHAU form uses the email passed to `/thank-you/schedule` in the query string or stored router data to match and update the existing contact.
 
 ## Changelog
 

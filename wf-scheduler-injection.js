@@ -26,6 +26,39 @@
     },
   };
 
+  const HDYHAU_CONFIG = {
+    portalId:
+      (window.HDYHAU_CONFIG && window.HDYHAU_CONFIG.portalId) || '7507639',
+    formId:
+      (window.HDYHAU_CONFIG && window.HDYHAU_CONFIG.formId) ||
+      window.HDYHAU_FORM_ID ||
+      '2abfe31d-49b3-433d-9776-4ff663f8c0b9',
+    sourcePropertyName:
+      (window.HDYHAU_CONFIG && window.HDYHAU_CONFIG.sourcePropertyName) ||
+      'how_did_you_hear_about_us',
+    otherPropertyName:
+      (window.HDYHAU_CONFIG && window.HDYHAU_CONFIG.otherPropertyName) ||
+      'hdyhau_other_text',
+  };
+
+  const HDYHAU_OPTIONS = [
+    'Search engine',
+    'Social media',
+    'Reddit',
+    'AI research',
+    'Podcast',
+    'Blog, article, or news',
+    'Influencer or content creator',
+    'Postcard or mailer',
+    'Professional association',
+    'Therapy platform or tools',
+    'Friend, family, or colleague',
+    'Billboard',
+  ];
+
+  let HDYHAU_FORM_RENDERED = false;
+  let HDYHAU_FORM_SUBMITTED = false;
+
   // Get form data from all storage sources
   function getStoredFormData() {
     // Try sessionStorage first since it includes scheduler_type.
@@ -117,6 +150,409 @@
     }
 
     return 'under_100k';
+  }
+
+  function getHubSpotCookie() {
+    try {
+      const match = document.cookie.match(/(?:^|; )hubspotutk=([^;]*)/);
+      return match ? decodeURIComponent(match[1]) : '';
+    } catch (e) {
+      log('HubSpot cookie lookup error:', e);
+      return '';
+    }
+  }
+
+  function getContactEmail(formData) {
+    if (!formData) return '';
+
+    const emailFields = ['email', 'email_address', '0-1/email', '0-2/email'];
+
+    for (const fieldName of emailFields) {
+      if (formData[fieldName]) {
+        return String(formData[fieldName]).trim();
+      }
+    }
+
+    return '';
+  }
+
+  function shuffleOptions(options) {
+    const shuffled = [...options];
+
+    for (let i = shuffled.length - 1; i > 0; i -= 1) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+
+    return [...shuffled, 'Other'];
+  }
+
+  function escapeHtml(value) {
+    return String(value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function buildHdyhauEndpoint() {
+    if (!HDYHAU_CONFIG.formId) return '';
+
+    return (
+      'https://api.hsforms.com/submissions/v3/integration/submit/' +
+      HDYHAU_CONFIG.portalId +
+      '/' +
+      HDYHAU_CONFIG.formId
+    );
+  }
+
+  function submitHdyhauResponse(email, source, otherText) {
+    const endpoint = buildHdyhauEndpoint();
+
+    if (!endpoint) {
+      return Promise.reject(new Error('Missing HDYHAU HubSpot form ID'));
+    }
+
+    const fields = [
+      { name: 'email', value: email },
+      { name: HDYHAU_CONFIG.sourcePropertyName, value: source },
+    ];
+
+    if (otherText) {
+      fields.push({
+        name: HDYHAU_CONFIG.otherPropertyName,
+        value: otherText,
+      });
+    }
+
+    const payload = {
+      fields,
+      context: {
+        pageUri: window.location.href,
+        pageName: document.title || 'Schedule Confirmation',
+      },
+    };
+
+    const hutk = getHubSpotCookie();
+    if (hutk) {
+      payload.context.hutk = hutk;
+    }
+
+    return fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+      keepalive: true,
+    }).then((response) => {
+      if (!response.ok) {
+        throw new Error(`HubSpot HDYHAU submission failed: ${response.status}`);
+      }
+
+      return response;
+    });
+  }
+
+  function ensureHdyhauStyles() {
+    if (document.getElementById('hdyhau-styles')) return;
+
+    const style = document.createElement('style');
+    style.id = 'hdyhau-styles';
+    style.textContent = `
+      .hdyhau-form {
+        color: #1a1a1a;
+        font-family: inherit;
+        margin: 32px auto 0;
+        max-width: 640px;
+        width: 100%;
+      }
+
+      .hdyhau-form[hidden] {
+        display: none;
+      }
+
+      .hdyhau-question {
+        border: 0;
+        margin: 0;
+        padding: 0;
+      }
+
+      .hdyhau-label {
+        display: block;
+        font-size: 18px;
+        font-weight: 600;
+        line-height: 1.4;
+        margin-bottom: 16px;
+      }
+
+      .hdyhau-options {
+        display: grid;
+        gap: 10px;
+      }
+
+      .hdyhau-option {
+        align-items: flex-start;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        cursor: pointer;
+        display: flex;
+        gap: 10px;
+        line-height: 1.4;
+        padding: 12px 14px;
+      }
+
+      .hdyhau-option input {
+        flex: 0 0 auto;
+        margin-top: 2px;
+      }
+
+      .hdyhau-other-field {
+        margin-top: 14px;
+      }
+
+      .hdyhau-other-field label {
+        display: block;
+        font-size: 15px;
+        font-weight: 500;
+        margin-bottom: 8px;
+      }
+
+      .hdyhau-other-field input {
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        box-sizing: border-box;
+        font: inherit;
+        min-height: 48px;
+        padding: 12px 14px;
+        width: 100%;
+      }
+
+      .hdyhau-submit {
+        background: #2e7d32;
+        border: 0;
+        border-radius: 8px;
+        color: #fff;
+        cursor: pointer;
+        font: inherit;
+        font-weight: 600;
+        margin-top: 18px;
+        min-height: 52px;
+        padding: 14px 28px;
+        width: 100%;
+      }
+
+      .hdyhau-submit:disabled {
+        cursor: not-allowed;
+        opacity: 0.5;
+      }
+
+      .hdyhau-status {
+        font-size: 15px;
+        margin-top: 12px;
+        min-height: 22px;
+      }
+
+      .hdyhau-status[data-state='error'] {
+        color: #b91c1c;
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
+  function renderHdyhauForm(formData, target) {
+    if (HDYHAU_FORM_RENDERED || HDYHAU_FORM_SUBMITTED) return;
+
+    const email = getContactEmail(formData);
+    if (!email) {
+      log('Skipping HDYHAU form because no contact email was found');
+      return;
+    }
+
+    HDYHAU_FORM_RENDERED = true;
+    ensureHdyhauStyles();
+
+    const form = document.createElement('form');
+    form.id = 'hdyhau-form';
+    form.className = 'hdyhau-form';
+    form.noValidate = true;
+
+    const optionsHtml = shuffleOptions(HDYHAU_OPTIONS)
+      .map((option, index) => {
+        const id = `hdyhau-option-${index}`;
+        return `
+          <label class="hdyhau-option" for="${id}">
+            <input
+              id="${id}"
+              name="hdyhau_source"
+              type="radio"
+              value="${escapeHtml(option)}"
+              required
+            >
+            <span>${escapeHtml(option)}</span>
+          </label>
+        `;
+      })
+      .join('');
+
+    form.innerHTML = `
+      <input type="hidden" name="email" value="${escapeHtml(email)}">
+      <fieldset class="hdyhau-question">
+        <legend class="hdyhau-label">How did you hear about us?</legend>
+        <div class="hdyhau-options">${optionsHtml}</div>
+      </fieldset>
+      <div class="hdyhau-other-field" hidden>
+        <label for="hdyhau-other-text">Please describe</label>
+        <input
+          id="hdyhau-other-text"
+          name="hdyhau_other_text"
+          type="text"
+          autocomplete="off"
+        >
+      </div>
+      <button class="hdyhau-submit" type="submit" disabled>Submit</button>
+      <div class="hdyhau-status" role="status" aria-live="polite"></div>
+    `;
+
+    const insertionTarget =
+      target || document.getElementById('scheduler-target');
+    if (insertionTarget && insertionTarget.parentNode) {
+      insertionTarget.insertAdjacentElement('afterend', form);
+    } else {
+      document.body.appendChild(form);
+    }
+
+    const submitButton = form.querySelector('.hdyhau-submit');
+    const otherField = form.querySelector('.hdyhau-other-field');
+    const otherInput = form.querySelector('#hdyhau-other-text');
+    const status = form.querySelector('.hdyhau-status');
+
+    form.addEventListener('change', () => {
+      const selected = form.querySelector(
+        'input[name="hdyhau_source"]:checked'
+      );
+      const hasSelection = !!selected;
+      const isOther = selected && selected.value === 'Other';
+
+      submitButton.disabled = !hasSelection || HDYHAU_FORM_SUBMITTED;
+      otherField.hidden = !isOther;
+
+      if (!isOther) {
+        otherInput.value = '';
+      }
+    });
+
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+
+      const selected = form.querySelector(
+        'input[name="hdyhau_source"]:checked'
+      );
+      if (!selected || HDYHAU_FORM_SUBMITTED) return;
+
+      submitButton.disabled = true;
+      status.dataset.state = '';
+      status.textContent = '';
+
+      submitHdyhauResponse(email, selected.value, otherInput.value.trim())
+        .then(() => {
+          HDYHAU_FORM_SUBMITTED = true;
+          form
+            .querySelectorAll('input, button')
+            .forEach((field) => (field.disabled = true));
+          status.textContent = 'Thanks!';
+          log('HDYHAU response submitted');
+        })
+        .catch((error) => {
+          submitButton.disabled = false;
+          status.dataset.state = 'error';
+          status.textContent = 'Please try again.';
+          log('HDYHAU submission error:', error);
+        });
+    });
+
+    log('HDYHAU form rendered');
+  }
+
+  function isHubSpotMessageOrigin(origin) {
+    try {
+      const host = new URL(origin).hostname;
+      return (
+        host.endsWith('hubspot.com') ||
+        host.endsWith('hsforms.com') ||
+        host.endsWith('hsforms.net') ||
+        host.endsWith('hsappstatic.net') ||
+        host.includes('hubspot') ||
+        host.includes('hsforms')
+      );
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function messageLooksLikeSchedulerSubmission(data) {
+    const raw =
+      typeof data === 'string' ? data : data ? JSON.stringify(data) : '';
+    const message = raw.toLowerCase();
+
+    return (
+      message.includes('meetingbooksucceeded') ||
+      message.includes('hsmeetingsbooksucceeded') ||
+      message.includes('meeting_booked') ||
+      message.includes('meetingbooked') ||
+      message.includes('meeting booked') ||
+      message.includes('booking confirmed') ||
+      message.includes('meeting scheduled')
+    );
+  }
+
+  function elementLooksLikeSchedulerConfirmation(element) {
+    const text = (element.textContent || element.innerText || '').toLowerCase();
+
+    return (
+      text.includes('booked') ||
+      text.includes('scheduled') ||
+      text.includes('confirmed') ||
+      text.includes('you are all set') ||
+      text.includes("you're all set")
+    );
+  }
+
+  function watchForSchedulerCompletion(formData, target) {
+    if (!target) return;
+
+    const showHdyhauForm = () => renderHdyhauForm(formData, target);
+
+    window.addEventListener('message', (event) => {
+      if (!isHubSpotMessageOrigin(event.origin)) return;
+      if (messageLooksLikeSchedulerSubmission(event.data)) {
+        log('Detected scheduler completion via postMessage');
+        showHdyhauForm();
+      }
+    });
+
+    if (typeof MutationObserver === 'undefined') return;
+
+    const observer = new MutationObserver((mutations) => {
+      for (const mutation of mutations) {
+        for (const node of mutation.addedNodes) {
+          if (node.nodeType !== 1) continue;
+
+          if (elementLooksLikeSchedulerConfirmation(node)) {
+            log('Detected scheduler completion via DOM mutation');
+            showHdyhauForm();
+            observer.disconnect();
+            return;
+          }
+        }
+      }
+    });
+
+    observer.observe(target, {
+      childList: true,
+      subtree: true,
+    });
   }
 
   // Build enhanced scheduler URL with form data
@@ -376,6 +812,8 @@
     };
     document.head.appendChild(script);
 
+    watchForSchedulerCompletion(allFormData, target);
+
     return true;
   }
 
@@ -470,6 +908,7 @@
       getQueryParams,
       buildSchedulerUrl,
       handleScheduler,
+      renderHdyhauForm,
       fireLeadEvents,
       resolveSchedulerType,
       init,
