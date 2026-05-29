@@ -36,10 +36,6 @@
     sourcePropertyName:
       (window.HDYHAU_CONFIG && window.HDYHAU_CONFIG.sourcePropertyName) ||
       'how_did_you_heard_about_us',
-    fallbackSourcePropertyName:
-      (window.HDYHAU_CONFIG &&
-        window.HDYHAU_CONFIG.fallbackSourcePropertyName) ||
-      'where_did_you_hear_about_heard_',
     otherPropertyName:
       (window.HDYHAU_CONFIG && window.HDYHAU_CONFIG.otherPropertyName) ||
       'hdyhau_other_text',
@@ -233,17 +229,6 @@
       { name: 'email', value: email },
       { name: HDYHAU_CONFIG.sourcePropertyName, value: source },
     ];
-
-    if (
-      HDYHAU_CONFIG.fallbackSourcePropertyName &&
-      HDYHAU_CONFIG.fallbackSourcePropertyName !==
-        HDYHAU_CONFIG.sourcePropertyName
-    ) {
-      fields.push({
-        name: HDYHAU_CONFIG.fallbackSourcePropertyName,
-        value: source,
-      });
-    }
 
     if (otherText) {
       fields.push({
