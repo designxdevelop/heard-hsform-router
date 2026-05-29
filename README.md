@@ -199,7 +199,7 @@ Injects and configures HubSpot Meeting schedulers.
 - Retrieves stored form data from sessionStorage, localStorage, and cookies
 - Builds enhanced scheduler URLs with prefilled data (name, email, company, phone)
 - Renders the post-scheduling HDYHAU form only after HubSpot Meetings appears to confirm a booking
-- Submits HDYHAU responses to HubSpot with `email`, `how_did_you_hear_about_us`, and optional `hdyhau_other_text` fields
+- Submits HDYHAU responses to HubSpot with `email`, `how_did_you_heard_about_us`, and optional `hdyhau_other_text` fields
 - Handles fallback to form page if no data exists
 - Fires conversion events to multiple platforms: Reddit, Meta (Facebook), Google Analytics, PostHog, and Amplitude
 - Includes a draggable debug panel (enabled via `?debug=true`) for inspecting stored data and routing decisions
@@ -209,7 +209,7 @@ Injects and configures HubSpot Meeting schedulers.
 Create or confirm a HubSpot form with these fields:
 
 - `email`
-- `how_did_you_hear_about_us`
+- `how_did_you_heard_about_us`
 - `hdyhau_other_text`
 
 The production HDYHAU form is configured in `wf-scheduler-injection.js`:

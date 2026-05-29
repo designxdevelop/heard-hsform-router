@@ -35,26 +35,37 @@
       '2abfe31d-49b3-433d-9776-4ff663f8c0b9',
     sourcePropertyName:
       (window.HDYHAU_CONFIG && window.HDYHAU_CONFIG.sourcePropertyName) ||
-      'how_did_you_hear_about_us',
+      'how_did_you_heard_about_us',
     otherPropertyName:
       (window.HDYHAU_CONFIG && window.HDYHAU_CONFIG.otherPropertyName) ||
       'hdyhau_other_text',
   };
 
   const HDYHAU_OPTIONS = [
-    'Search engine',
-    'Social media',
-    'Reddit',
-    'AI research',
-    'Podcast',
-    'Blog, article, or news',
-    'Influencer or content creator',
-    'Postcard or mailer',
-    'Professional association',
-    'Therapy platform or tools',
-    'Friend, family, or colleague',
-    'Billboard',
+    { label: 'Search engine', value: 'Search engine' },
+    { label: 'Social media', value: 'Social media' },
+    { label: 'Reddit', value: 'Reddit' },
+    { label: 'AI research', value: 'AI research' },
+    { label: 'Podcast', value: 'Podcast' },
+    { label: 'Blog, article, or news', value: 'Blog, article, or news' },
+    {
+      label: 'Influencer or content creator',
+      value: 'Influencer or content creator',
+    },
+    { label: 'Postcard or mailer', value: 'Postcard or mailer' },
+    { label: 'Professional association', value: 'Professional association' },
+    {
+      label: 'Therapy platform or tools',
+      value: 'Therapy platform or tools',
+    },
+    {
+      label: 'Friend, family, or colleague',
+      value: 'Friend, family, or colleague',
+    },
+    { label: 'Billboard', value: 'Billboard' },
   ];
+
+  const HDYHAU_OTHER_OPTION = { label: 'Other', value: 'Other' };
 
   let HDYHAU_FORM_RENDERED = false;
   let HDYHAU_FORM_SUBMITTED = false;
@@ -184,7 +195,7 @@
       [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
     }
 
-    return [...shuffled, 'Other'];
+    return [...shuffled, HDYHAU_OTHER_OPTION];
   }
 
   function escapeHtml(value) {
@@ -479,10 +490,10 @@
               id="${id}"
               name="hdyhau_source"
               type="radio"
-              value="${escapeHtml(option)}"
+              value="${escapeHtml(option.value)}"
               required
             >
-            <span>${escapeHtml(option)}</span>
+            <span>${escapeHtml(option.label)}</span>
           </label>
         `;
       })
